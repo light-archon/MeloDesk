@@ -1,0 +1,75 @@
+using "ui/widgets/widgets.style";
+using "ui/colors.palette";
+
+musigramCatalogPadding: 20px;
+musigramCatalogGap: 12px;
+musigramCatalogSearchHeight: 48px;
+musigramCatalogToolbarHeight: 44px;
+musigramCatalogStatusHeight: 40px;
+musigramCatalogPlayerHeight: 116px;
+musigramCatalogButtonWidth: 100px;
+musigramCatalogSyncWidth: 52px;
+musigramCatalogVolumeWidth: 100px;
+musigramCatalogSeekHeight: 20px;
+musigramCatalogHeroHeight: 420px;
+musigramCatalogSidebarWidth: 168px;
+musigramCatalogSidebarAt: 900px;
+musigramCatalogArtistWidth: 156px;
+musigramCatalogArtistHeight: 204px;
+musigramCatalogArtistCover: 128px;
+musigramCatalogGridWide: 640px;
+musigramCatalogCardHeight: 122px;
+musigramCatalogCardCount: 4;
+musigramCatalogCoverSize: 44px;
+musigramCatalogActionWidth: 36px;
+musigramCatalogHeartSize: 20px;
+musigramCatalogAnimationDuration: 160;
+musigramCatalogSearchDelay: 300;
+musigramCatalogWaveMoodsAt: 1100px;
+musigramCatalogMiniHeight: 82px;
+musigramCatalogMiniCoverSize: 52px;
+musigramCatalogTextSkip: 8px;
+musigramCatalogRadius: 18px;
+musigramTransferWidth: 640px;
+musigramTransferHeight: 650px;
+musigramTransferPageSize: 20;
+musigramPlayerControlSize: 32px;
+musigramPlayerPlaySize: 44px;
+musigramPlayerGlyphSize: 22px;
+musigramPlayerGap: 6px;
+musigramPlayerTrackWidth: 280px;
+musigramPlayerWideAt: 1050px;
+musigramPlayerTimeAt: 650px;
+musigramPlayerTimeWidth: 108px;
+musigramPlayerQueuePageSize: 100;
+musigramVolumePopupWidth: 60px;
+musigramVolumePopupHeight: 248px;
+musigramVolumePopupPadding: 18px;
+musigramVolumePopupInset: 3px;
+musigramVolumePopupSlide: 6px;
+musigramVolumeHideDelay: 240;
+musigramVolumeSendInterval: 80;
+musigramVolumeSettleDelay: 1000;
+musigramVolumeSlider: MediaSlider(defaultContinuousSlider) {
+	width: 6px;
+	seekSize: size(10px, 10px);
+	activeFg: windowActiveTextFg;
+	activeFgOver: windowActiveTextFg;
+	inactiveFg: windowBgOver;
+	inactiveFgOver: windowBgOver;
+}
+musigramCatalogHeroTitle: font(32px bold);
+musigramCatalogHeading: font(22px bold);
+musigramCatalogCardFont: font(15px semibold);
+musigramCatalogTrackFont: font(14px semibold);
+musigramCatalogMenuIcon: icon {{ "photo_editor/widget_music", menuIconColor }};
+musigramCatalogHeadingLabel: FlatLabel(defaultFlatLabel) {
+	style: TextStyle(defaultTextStyle) {
+		font: font(24px bold);
+	}
+}
+
+musigramCatalogRow: SettingsButton(defaultSettingsButton) {
+	height: 60px;
+	padding: margins(20px, 0px, 20px, 0px);
+}

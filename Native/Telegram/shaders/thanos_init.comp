@@ -1,0 +1,57 @@
+#version 450
+
+layout(local_size_x = 64) in;
+
+// One texel per float: offset.x, offset.y, lifetime for the state and
+// x, y for the velocity, as only single-channel images load everywhere.
+layout(r32f, binding = 0) uniform image2D particleStateImage;
+layout(r32f, binding = 2) uniform image2D particleVelocityImage;
+
+layout(std140, binding = 1) uniform Params {
+	uint particleCountX;
+	uint particleCountY;
+	uint seed;
+	uint _pad;
+};
+
+uint hash(uint x) {
+	x ^= x >> 16u;
+	x *= 0x45d9f3bu;
+	x ^= x >> 16u;
+	x *= 0x45d9f3bu;
+	x ^= x >> 16u;
+	return x;
+}
+
+float hashFloat(uint x) {
+	return float(hash(x)) / float(0xFFFFFFFFu);
+}
+
+void main() {
+	uint gid = gl_GlobalInvocationID.x;
+	uint count = particleCountX * particleCountY;
+	if (gid >= count) {
+		return;
+	}
+
+	uint s = gid * 3u + seed;
+
+	float direction = hashFloat(s) * (3.14159265 * 2.0);
+	float speed = (0.1 + hashFloat(s + 1u) * 0.1) * 320.0;
+
+	vec2 velocity = vec2(cos(direction) * speed, sin(direction) * speed);
+	float lifetime = 1.5 + hashFloat(s + 2u) * 1.5;
+
+	int x = int(gid % particleCountX);
+	int y = int(gid / particleCountX);
+	ivec2 stateCoord = ivec2(x * 3, y);
+	ivec2 velocityCoord = ivec2(x * 2, y);
+	imageStore(particleStateImage, stateCoord, vec4(0.0));
+	imageStore(particleStateImage, stateCoord + ivec2(1, 0), vec4(0.0));
+	imageStore(particleStateImage, stateCoord + ivec2(2, 0), vec4(lifetime));
+	imageStore(particleVelocityImage, velocityCoord, vec4(velocity.x));
+	imageStore(
+		particleVelocityImage,
+		velocityCoord + ivec2(1, 0),
+		vec4(velocity.y));
+}

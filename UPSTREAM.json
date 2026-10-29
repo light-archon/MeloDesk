@@ -1,0 +1,53 @@
+{
+  "TelegramDesktop": {
+    "Repository": "https://github.com/telegramdesktop/tdesktop",
+    "Tag": "v7.3.3",
+    "Commit": "5c674f1f6a0f6ace55b67f8bc295138680fe588b",
+    "Submodules": [
+      " 87f9d768866548b5b86e72be66c60c5abd4d9b37 Telegram/ThirdParty/GSL (v4.1.0)",
+      " 61aaa7cc354de91d5898ffb0b2a6c62628d9a76f Telegram/ThirdParty/MicroTeX (heads/master)",
+      " 720f62bddb7226106071d4728c292cb1df519ceb Telegram/ThirdParty/QR (720f62b)",
+      " b86af81982860c96295a7e95e4c60cb335615cef Telegram/ThirdParty/TooManyCooks (b86af81)",
+      " b48dc46512566f5a2d41118c8c1116c4f96dc661 Telegram/ThirdParty/cld3 (heads/master)",
+      " d7d4a24a9ebfa7581994ea6df0297662bfeaf413 Telegram/ThirdParty/cmark-gfm (d7d4a24)",
+      " 292eff8bd8ee230a7df1d6a1c00c4ea0eb2f0362 Telegram/ThirdParty/expected (292eff8)",
+      " 0285a5d18367d8f3af80dab7e4819d5555982340 Telegram/ThirdParty/fcitx5-qt (heads/master)",
+      " 9b3e6f9ab59d1fe4d9de73d3bf0fed7789f921c5 Telegram/ThirdParty/hime (9b3e6f9)",
+      " a698d8b53cab3507d1d619d5fa08a88777abe50b Telegram/ThirdParty/hunspell (a698d8b)",
+      " fd84da51b554eac25e35b1e3f373edaab3029b15 Telegram/ThirdParty/kcoreaddons (fd84da5)",
+      " df82311a1081e576c4ac020204578bb8a81b21ec Telegram/ThirdParty/kimageformats (df82311)",
+      " 170bee2b82cdb7b2ed25af301f62cb6efdd40ec1 Telegram/ThirdParty/libcbor (170bee2)",
+      " 46111c61a9f49b7a9886127e679d4317478fab1c Telegram/ThirdParty/libcbor/doxygen-theme (heads/master)",
+      " b974e7cf2ee7392134cc12c08b76a068cf250dd8 Telegram/ThirdParty/libfido2 (b974e7c)",
+      " 75f26c17308871bee69f69a2831a8af2bc2f3627 Telegram/ThirdParty/libprisma (75f26c1)",
+      " 5ff839680134437dbf4678f3d0c7b371d84f4964 Telegram/ThirdParty/lz4 (5ff8396)",
+      " 498ec7ffab3ac140c2469638a14451788f03e798 Telegram/ThirdParty/nimf (498ec7f)",
+      " 5ba39112d2eafbb3c851a16a537f29b445022998 Telegram/ThirdParty/range-v3 (heads/master)",
+      " 2dae74bb693e42d850fb0adcc9045c5b71fbdeae Telegram/ThirdParty/range-v3/doc/gh-pages (2dae74b)",
+      " 1c236c09f8d8569fead14bd68000618a52051225 Telegram/ThirdParty/tgcalls (1c236c0)",
+      " 23a76c392170dbbd26230f85ef56c3a57e52b857 Telegram/ThirdParty/xdg-desktop-portal (23a76c3)",
+      " c87183a77d67f7d37e3d2d1b7eaac5e7c695e4f0 Telegram/ThirdParty/xxHash (c87183a)",
+      " ab51000506afc1a450557a3608646bc04ba951fa Telegram/ThirdParty/zxcvbn (ab51000)",
+      " dbd1d53137cd581cfdbeebe93bcaf54abf55ec74 Telegram/codegen (heads/master)",
+      " 95a543e426e35938dd632139d0bb828b268c3b4c Telegram/lib_base (95a543e)",
+      " de724667d7bdfbf906f78fc405af1ee9f7723d49 Telegram/lib_crl (heads/master)",
+      " fbb922c30b7c30ba17ad5fd4fcb989eadd620062 Telegram/lib_lottie (heads/master)",
+      " 6fdf60461444ba150e13ac36009c0ffce72c4c83 Telegram/lib_qr (heads/master)",
+      " c57cccffb01d85570decd7fccb88419c9a682e63 Telegram/lib_rpl (c57cccf)",
+      " 3273fd25c185fb626a9836dafbd644c2bd129ee1 Telegram/lib_spellcheck (3273fd2)",
+      " ccdc72548a5065b5991b4e06e610d76bc4f6023e Telegram/lib_storage (heads/master)",
+      " 29746d31247c915a9ec870241399a9d103c39f87 Telegram/lib_tl (29746d3)",
+      " b23983df9dd87b6993afdcefb48daf890beb545e Telegram/lib_translate (heads/master)",
+      " 2f29133506e174a9d4a7b78740c3f1b04c2b993c Telegram/lib_ui (2f29133)",
+      " 52636e86eaa493de670daf71959d000b281bd153 Telegram/lib_webrtc (52636e8)",
+      " ef03bbfd696c7527d7cb57ac20c3a5d30feb98fa Telegram/lib_webview (heads/master)",
+      " 7ceca3019b4750d7a5acb2de0faffd523ee14095 cmake (7ceca30)",
+      " 47cf94f83b54cda59018135601e19d7fb0c77776 cmake/external/glib/cppgir (47cf94f)",
+      " 95b9cb015fa17baa749c2b396b335906e1596a9e cmake/external/glib/cppgir/expected-lite (95b9cb0)"
+    ]
+  },
+  "TgWsProxy": {
+    "Repository": "https://github.com/Flowseal/tg-ws-proxy",
+    "Tag": "v1.11.2"
+  }
+}

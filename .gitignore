@@ -1,0 +1,17 @@
+/artifacts/
+/Libraries/
+/ThirdParty/
+**/bin/
+**/obj/
+**/out/
+**/.vs/
+**/__pycache__/
+**/tdata/
+/Music/tools/*
+!/Music/tools/deno-LICENSE.md
+!/Music/tools/yt-dlp-LICENSE.txt
+**/telegram-app.local.json
+**/admin-secret.json
+**/runtime.json
+*.pdb
+*.log

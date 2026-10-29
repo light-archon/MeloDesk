@@ -1,0 +1,6 @@
+MeloDesk embedded Telegram connection helper
+TG WS Proxy 1.11.2 by Flowseal, MIT license.
+https://github.com/Flowseal/tg-ws-proxy
+Core sources are unmodified. MeloDesk runner controls process lifetime and local configuration.
+Python 3.13.17 PSF license: runtime/LICENSE.txt. Package licenses: packages/*.dist-info/licenses/.
+This proxy handles Telegram connections; it does not proxy YouTube/SoundCloud playback.

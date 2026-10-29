@@ -1,0 +1,19 @@
+{
+  "Product": "MeloDesk",
+  "Version": "0.19.2",
+  "Platform": "Windows x64",
+  "NativeBase": "Telegram Desktop v7.3.3",
+  "NativeBaseCommit": "5c674f1f6a0f6ace55b67f8bc295138680fe588b",
+  "NativeConfiguration": "Debug with /O2 /Ob2",
+  "MusicHostVersion": "0.19.0",
+  "NativeSha256": "752d9be15b3bacb67eed0f8a622bd368d123f58d6b1343475677dccfb60d818e",
+  "MusicHostSha256": "121d9e052a56a140b8a2fd27ee499752711a1b4789b3ed0d81c9cede8c63ef13",
+  "PromotionsMode": "Embedded",
+  "UserDataIncluded": false,
+  "NativeBuildPassed": true,
+  "NativeUiAutomaticallyVerified": false,
+  "RegressionChecks": {
+    "Count": 47,
+    "AppliesTo": "MusicHost 0.19.0, unchanged in 0.19.2"
+  }
+}
