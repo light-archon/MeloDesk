@@ -29,10 +29,14 @@ public sealed class OnlineMusicSearch : IDisposable
     private const string AudioFormat = "bestaudio[protocol=https]/bestaudio[protocol=http]/bestaudio/best";
     private readonly HttpClient _probe = new() { Timeout = TimeSpan.FromSeconds(6) };
     private readonly string _toolsPath;
+    private readonly SemaphoreSlim _soundCloudGate = new(1);
+    private readonly Dictionary<string, (DateTimeOffset Until, OnlineSearchResult Result)> _soundCloudResults = new(StringComparer.OrdinalIgnoreCase);
     public OnlineMusicSearch(string? toolsPath = null) => _toolsPath = toolsPath ?? Path.Combine(AppContext.BaseDirectory, "tools");
 
     public async Task<OnlineSearchResult> SearchAsync(string query, string source = "Все", CancellationToken cancellationToken = default, Action<IReadOnlyList<OnlineTrack>>? onBatch = null)
     {
+        query = query.Trim();
+        cancellationToken.ThrowIfCancellationRequested();
         if (Uri.TryCreate(query, UriKind.Absolute, out var link) && link.Scheme is "http" or "https")
         {
             if (!IsSupportedLink(link)) throw new ArgumentException("Поддерживаются ссылки YouTube и SoundCloud.");
@@ -45,6 +49,12 @@ public sealed class OnlineMusicSearch : IDisposable
         {
             try
             {
+                if (provider == "SoundCloud")
+                {
+                    var result = await SearchSoundCloudAsync(query, cancellationToken).ConfigureAwait(false);
+                    onBatch?.Invoke(result.Tracks);
+                    return (Tracks: result.Tracks.ToArray(), Error: (string?)null);
+                }
                 var search = (provider == "YouTube" ? "ytsearch8:" : "scsearch8:") + query;
                 using var document = JsonDocument.Parse(await RunAsync(new[] { "--flat-playlist", "--dump-single-json", "--skip-download", search }, cancellationToken).ConfigureAwait(false));
                 var entries = document.RootElement.GetProperty("entries");
@@ -56,6 +66,40 @@ public sealed class OnlineMusicSearch : IDisposable
             catch (Exception error) { return (Tracks: Array.Empty<OnlineTrack>(), Error: $"{provider}: {error.Message}"); }
         })).ConfigureAwait(false);
         return new OnlineSearchResult(results.SelectMany(r => r.Tracks).ToArray(), results.Where(r => r.Error != null).Select(r => r.Error!).ToArray());
+    }
+
+    private async Task<OnlineSearchResult> SearchSoundCloudAsync(string query, CancellationToken token)
+    {
+        await _soundCloudGate.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            if (_soundCloudResults.TryGetValue(query, out var cached) && cached.Until > DateTimeOffset.UtcNow)
+                return cached.Result;
+            var arguments = new[] { "--flat-playlist", "--dump-single-json", "--skip-download", "scsearch20:" + query };
+            string json;
+            try { json = await RunAsync(arguments, token).ConfigureAwait(false); }
+            catch (InvalidOperationException error) when (error.Message.Contains("client id", StringComparison.OrdinalIgnoreCase)
+                || error.Message.Contains("401", StringComparison.Ordinal) || error.Message.Contains("403", StringComparison.Ordinal))
+            {
+                json = await RunAsync(arguments, token, refreshSoundCloudClient: true).ConfigureAwait(false);
+            }
+            token.ThrowIfCancellationRequested();
+            using var document = JsonDocument.Parse(json);
+            var entries = document.RootElement.TryGetProperty("entries", out var value) && value.ValueKind == JsonValueKind.Array
+                ? value.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Object).Select(e => ParseTrack(e, "SoundCloud"))
+                : Enumerable.Empty<OnlineTrack>();
+            var tracks = entries.Where(t => Uri.TryCreate(t.Url, UriKind.Absolute, out var uri)
+                && uri.Scheme == "https" && (uri.Host == "soundcloud.com" || uri.Host.EndsWith(".soundcloud.com", StringComparison.OrdinalIgnoreCase)))
+                .DistinctBy(t => t.Url).ToArray();
+            var result = new OnlineSearchResult(tracks, Array.Empty<string>());
+            if (tracks.Length > 0)
+            {
+                if (_soundCloudResults.Count >= 20) _soundCloudResults.Remove(_soundCloudResults.MinBy(x => x.Value.Until).Key);
+                _soundCloudResults[query] = (DateTimeOffset.UtcNow.AddMinutes(5), result);
+            }
+            return result;
+        }
+        finally { _soundCloudGate.Release(); }
     }
 
     public async Task<AudioStream> ResolveAudioAsync(OnlineTrack track, CancellationToken cancellationToken = default)
@@ -92,8 +136,11 @@ public sealed class OnlineMusicSearch : IDisposable
         return new AudioStream(streamUrl, headers, protocol.Contains("m3u8") || protocol.Contains("dash_segments"));
     }
 
-    private async Task<string> RunAsync(IEnumerable<string> arguments, CancellationToken cancellationToken)
+    private async Task<string> RunAsync(IEnumerable<string> arguments, CancellationToken cancellationToken, bool refreshSoundCloudClient = false)
     {
+        var requested = arguments.ToArray();
+        var soundCloud = requested.Any(a => a.StartsWith("scsearch", StringComparison.Ordinal)
+            || Uri.TryCreate(a, UriKind.Absolute, out var uri) && (uri.Host == "soundcloud.com" || uri.Host.EndsWith(".soundcloud.com", StringComparison.OrdinalIgnoreCase)));
         var fastExecutable = Path.Combine(_toolsPath, "yt-dlp-fast", "yt-dlp.exe");
         var executable = File.Exists(fastExecutable) ? fastExecutable : Path.Combine(_toolsPath, "yt-dlp.exe");
         if (!File.Exists(executable)) throw new FileNotFoundException("Не найден модуль поиска yt-dlp.exe.");
@@ -103,11 +150,17 @@ public sealed class OnlineMusicSearch : IDisposable
             WorkingDirectory = Path.GetDirectoryName(executable)!, UseShellExecute = false, CreateNoWindow = true,
             StandardOutputEncoding = System.Text.Encoding.UTF8, StandardErrorEncoding = System.Text.Encoding.UTF8
         };
-        foreach (var value in new[] { "--ignore-config", "--force-ipv4", "--no-plugin-dirs", "--no-cache-dir", "--no-warnings", "--socket-timeout", "8", "--retries", "1", "--extractor-retries", "1", "--encoding", "utf-8" })
+        foreach (var value in new[] { "--ignore-config", "--force-ipv4", "--no-plugin-dirs", "--no-warnings", "--socket-timeout", soundCloud ? "15" : "8", "--retries", "1", "--extractor-retries", "1", "--encoding", "utf-8" })
             start.ArgumentList.Add(value);
+        if (soundCloud && !refreshSoundCloudClient)
+        {
+            start.ArgumentList.Add("--cache-dir");
+            start.ArgumentList.Add(Path.Combine(AppPaths.Root, "tools-cache", "yt-dlp"));
+        }
+        else start.ArgumentList.Add("--no-cache-dir");
         var deno = Path.Combine(_toolsPath, "deno.exe");
         if (File.Exists(deno)) { start.ArgumentList.Add("--js-runtimes"); start.ArgumentList.Add("deno:" + deno); }
-        foreach (var value in arguments) start.ArgumentList.Add(value);
+        foreach (var value in requested) start.ArgumentList.Add(value);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(70));
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Не удалось запустить модуль поиска.");
@@ -126,6 +179,8 @@ public sealed class OnlineMusicSearch : IDisposable
         if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(json))
         {
             var message = errorText.Split('\n').LastOrDefault(line => line.StartsWith("ERROR:"))?.Trim() ?? "Источник временно недоступен.";
+            if (soundCloud && (message.Contains("timed out", StringComparison.OrdinalIgnoreCase) || message.Contains("Unable to download", StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("SoundCloud не ответил. Проверь подключение к SoundCloud и повтори поиск.");
             throw new InvalidOperationException(message.Length > 400 ? message[..400] : message);
         }
         return json;

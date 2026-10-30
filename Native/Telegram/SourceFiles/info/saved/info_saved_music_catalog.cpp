@@ -12,6 +12,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QSettings>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
 #include <QtCore/QUuid>
 #include <QtGui/QImageReader>
@@ -37,6 +38,7 @@
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/vertical_layout.h"
 #include "window/section_widget.h"
+#include "window/main_window.h"
 #include "window/section_memento.h"
 #include "window/window_session_controller.h"
 
@@ -63,6 +65,14 @@ namespace {
 void DrawSquareCover(QPainter &p, QRect target, const QImage &image) {
 	const auto side = std::min(image.width(), image.height());
 	p.drawImage(target, image, QRect((image.width() - side) / 2, (image.height() - side) / 2, side, side));
+}
+
+void DrawBrandLogo(QPainter &p, QRect target) {
+	const auto center = target.center();
+	const auto side = std::min(target.width(), target.height());
+	target.setSize(QSize(side, side));
+	target.moveCenter(center);
+	DrawSquareCover(p, target, Window::LogoNoMargin());
 }
 
 void DrawHeart(QPainter &p, QRectF target, QColor stroke, QColor fill) {
@@ -127,18 +137,7 @@ protected:
 				p.save(); auto clip = QPainterPath(); clip.addRoundedRect(target, 12, 12); p.setClipPath(clip);
 				DrawSquareCover(p, target, _image); p.restore();
 			} else {
-				const auto circle = QRectF(28, 24, 112, 112);
-				auto color = st::windowActiveTextFg->c; color.setAlpha(45);
-				p.setBrush(color); p.drawEllipse(circle);
-				color.setAlpha(90); p.setPen(QPen(color, 1.5)); p.setBrush(Qt::NoBrush);
-				p.drawEllipse(circle.adjusted(10, 10, -10, -10));
-				p.drawEllipse(circle.adjusted(20, 20, -20, -20));
-				auto letter = QPainterPath();
-				letter.addText(QPointF(), st::musigramCatalogHeroTitle->f, u"M"_q);
-				p.save();
-				p.translate(circle.center() - letter.boundingRect().center());
-				p.fillPath(letter, st::windowActiveTextFg->c);
-				p.restore();
+				DrawBrandLogo(p, target);
 			}
 		}
 		if (compact) {
@@ -147,9 +146,7 @@ protected:
 				p.save(); auto clip = QPainterPath(); clip.addRoundedRect(target, 10, 10); p.setClipPath(clip);
 				DrawSquareCover(p, target, _image); p.restore();
 			} else {
-				auto color = st::windowActiveTextFg->c; color.setAlpha(40); p.setBrush(color);
-				p.drawRoundedRect(target, 12, 12); p.setPen(st::windowActiveTextFg->c);
-				p.setFont(st::musigramCatalogHeading->f); p.drawText(target, Qt::AlignCenter, u"M"_q);
+				DrawBrandLogo(p, target);
 			}
 		}
 		const auto textWidth = std::max(0, width() - left - 48);
@@ -1660,6 +1657,7 @@ private:
 	Ui::FlatLabel _title;
 	Ui::FlatLabel _heading;
 	Ui::InputField _query;
+	Ui::InputField _playlistQuery;
 	Ui::RoundButton _search;
 	Ui::FlatLabel _alternative;
 	Ui::RoundButton _source;
@@ -1732,6 +1730,7 @@ CatalogWidget::CatalogWidget(
 , _title(this, rpl::single(u"MeloDesk"_q), st::infoTopBarTitle)
 , _heading(this, tr::lng_musigram_my_music(), st::musigramCatalogHeadingLabel)
 , _query(this, st::defaultInputField, tr::lng_musigram_search())
+, _playlistQuery(this, st::defaultInputField, tr::lng_musigram_search())
 , _search(this, tr::lng_musigram_find(), st::defaultActiveButton)
 , _alternative(this, st::defaultSubTextLabel)
 , _source(this, tr::lng_musigram_wave(), st::defaultLightButton)
@@ -1743,7 +1742,13 @@ CatalogWidget::CatalogWidget(
 , _status(this, st::defaultSubTextLabel)
 , _scroll(this)
 , _rows(_scroll.setOwnedWidget(object_ptr<Ui::VerticalLayout>(&_scroll)))
-, _suggestTimer([=] { search(); }) {
+, _suggestTimer([=] {
+	if (_playlistMode) {
+		renderTracks();
+	} else {
+		search();
+	}
+}) {
 	_back.setClickedCallback([=] {
 		_suggestTimer.cancel();
 		if (!_genreKey.isEmpty()) {
@@ -1771,6 +1776,7 @@ CatalogWidget::CatalogWidget(
 	updateSearchSource();
 	_source.setClickedCallback([=] { showHome(); });
 	_results.setClickedCallback([=] {
+		_suggestTimer.cancel();
 		_genreKey.clear();
 		_playlistMode = false;
 		_homeMode = false;
@@ -1788,6 +1794,15 @@ CatalogWidget::CatalogWidget(
 	_sync.setClickedCallback([=] {
 		_backend->send({ { u"command"_q, u"library"_q } });
 	});
+	_playlistQuery.changes() | rpl::on_next([=] {
+		if (!_playlistMode) return;
+		_suggestTimer.cancel();
+		_suggestTimer.callOnce(st::musigramCatalogSearchDelay);
+	}, lifetime());
+	_playlistQuery.submits() | rpl::on_next([=] {
+		_suggestTimer.cancel();
+		if (_playlistMode) renderTracks();
+	}, lifetime());
 	_query.submits() | rpl::on_next([=] { search(); }, lifetime());
 	_query.changes() | rpl::on_next([=] {
 		_suggestTimer.cancel();
@@ -1841,6 +1856,8 @@ void CatalogWidget::layout() {
 		&& _genreKey.isEmpty()
 		&& _artistId.isEmpty()
 		&& _albumId.isEmpty();
+	const auto playlistSearchVisible = _playlistMode && !_playlistId.isEmpty();
+	_playlistQuery.setVisible(playlistSearchVisible);
 	const auto focus = QApplication::focusWidget();
 	if (!searchVisible && focus && (focus == &_query || _query.isAncestorOf(focus))) {
 		_source.setFocus();
@@ -1885,6 +1902,11 @@ void CatalogWidget::layout() {
 	_import.move(_create.x() + _create.width() + gap, top);
 	_sync.move(width() - pad - _sync.width(), top);
 	top += st::musigramCatalogToolbarHeight;
+	if (playlistSearchVisible) {
+		_playlistQuery.resizeToWidth(content);
+		_playlistQuery.move(sidebar + pad, top);
+		top += _playlistQuery.height() + gap;
+	}
 	_status.resizeToWidth(content);
 	_status.move(sidebar + pad, top);
 	top += st::musigramCatalogStatusHeight;
@@ -1978,6 +2000,11 @@ void CatalogWidget::switchSearchSource() {
 
 void CatalogWidget::search() {
 	_suggestTimer.cancel();
+	if (_playlistMode) {
+		renderTracks();
+		return;
+	}
+	_genreKey.clear();
 	const auto query = _query.getLastText().trimmed();
 	if (query.isEmpty()) {
 		_query.setFocus();
@@ -2192,6 +2219,29 @@ void CatalogWidget::renderTracks() {
             }
         }
     }
+    if (_playlistMode) {
+        const auto normalized = [](QString text) {
+            return text.normalized(QString::NormalizationForm_KC)
+                .toCaseFolded().replace(QChar(0x0451), QChar(0x0435));
+        };
+        const auto words = normalized(_playlistQuery.getLastText())
+            .split(QRegularExpression(u"\\s+"_q), Qt::SkipEmptyParts);
+        if (!words.isEmpty()) {
+            auto matches = QJsonArray();
+            for (const auto &value : _shownTracks) {
+                const auto track = value.toObject();
+                const auto text = normalized(track.value(u"Title"_q).toString()
+                    + u" "_q + track.value(u"Artist"_q).toString()
+                    + u" "_q + track.value(u"Album"_q).toString());
+                if (ranges::all_of(words, [&](const QString &word) {
+                    return text.contains(word);
+                })) {
+                    matches.push_back(value);
+                }
+            }
+            _shownTracks = std::move(matches);
+        }
+    }
     if (_homeMode) _shownTracks = {};
     if (!_artistId.isEmpty()) _shownTracks = _artistProfile.value(u"Tracks"_q).toArray();
     if (!_artistId.isEmpty() && _artistAlbums) _shownTracks = {};
@@ -2242,6 +2292,8 @@ void CatalogWidget::renderTracks() {
             favorites.push_back(playlist.value(u"IsFavorites"_q).toBool());
         }
         _rows->add(object_ptr<DiscoveryGrid>(_rows, std::move(titles), std::move(subtitles), [=](int index) {
+            _suggestTimer.cancel();
+            _playlistQuery.setText(QString());
             _playlistId = playlists[index].toObject().value(u"Id"_q).toString();
             refreshPlaylistLabel();
             renderTracks();
@@ -2281,7 +2333,9 @@ void CatalogWidget::renderTracks() {
     } else if (isSearchLanding()) {
         renderDiscovery();
     } else if (_playlistMode && _shownTracks.isEmpty()) {
-        _rows->add(object_ptr<Ui::FlatLabel>(_rows, tr::lng_musigram_playlist_empty(), st::defaultSubTextLabel), { pad, gap, pad, gap });
+        _rows->add(object_ptr<Ui::FlatLabel>(_rows, (_playlistQuery.getLastText().trimmed().isEmpty()
+            ? tr::lng_musigram_playlist_empty()
+            : tr::lng_musigram_empty()), st::defaultSubTextLabel), { pad, gap, pad, gap });
     }
     if (!_playlistMode && !_homeMode && _genreKey.isEmpty() && _artistId.isEmpty() && _albumId.isEmpty() && !isSearchLanding() && !_query.getLastText().trimmed().isEmpty()) {
         if (!_artists.isEmpty()) {
@@ -2529,6 +2583,8 @@ void CatalogWidget::loadMore() {
 }
 
 void CatalogWidget::choosePlaylist() {
+    _suggestTimer.cancel();
+    _playlistQuery.setText(QString());
 	_genreKey.clear();
 	_suggestTimer.cancel();
     _playlistMode = true;

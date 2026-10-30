@@ -62,18 +62,29 @@ bool DarkTasbarValueValid/* = false*/;
 [[nodiscard]] QImage MonochromeIconFor(int size, bool darkMode) {
 	Expects(size > 0);
 
-	static const auto Content = [&] {
-		auto f = QFile(u":/gui/icons/tray/monochrome.svg"_q);
-		return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+	static const auto SourceMask = [] {
+		auto image = Window::LogoNoMargin().convertToFormat(QImage::Format_ARGB32);
+		for (auto y = 0; y != image.height(); ++y) {
+			const auto row = reinterpret_cast<QRgb*>(image.scanLine(y));
+			for (auto x = 0; x != image.width(); ++x) {
+				const auto pixel = row[x];
+				const auto light = std::min({ qRed(pixel), qGreen(pixel), qBlue(pixel) });
+				const auto alpha = qAlpha(pixel)
+					* std::clamp((light - 100) * 255 / 155, 0, 255) / 255;
+				row[x] = qRgba(255, 255, 255, alpha);
+			}
+		}
+		return image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
 	}();
 	static auto Mask = QImage();
 	static auto Size = 0;
 	if (Mask.isNull() || Size != size) {
 		Size = size;
-		Mask = QImage(size, size, QImage::Format_ARGB32_Premultiplied);
-		Mask.fill(Qt::transparent);
-		auto p = QPainter(&Mask);
-		QSvgRenderer(Content).render(&p, QRectF(0, 0, size, size));
+		Mask = SourceMask.scaled(
+			size,
+			size,
+			Qt::KeepAspectRatio,
+			Qt::SmoothTransformation);
 	}
 	static auto Colored = QImage();
 	static auto ColoredDark = QImage();

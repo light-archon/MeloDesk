@@ -1,4 +1,4 @@
-#define AppVersion "0.19.2"
+#define AppVersion "0.20.0"
 #define RuntimeDir "..\artifacts\runtime"
 
 [Setup]

@@ -68,7 +68,7 @@ sealed class MusicHost : IDisposable
     }
     public async Task RunAsync()
     {
-        Write(new { Event = "ready", Protocol = 1, Version = "0.19.0" });
+        Write(new { Event = "ready", Protocol = 1, Version = "0.20.0" });
         while (await _input.ReadLineAsync(_shutdown.Token) is { } line)
         {
             if (line.Length > 16 * 1024 * 1024) { Write(new { Event = "error", Error = "Запрос слишком большой." }); continue; }
@@ -106,8 +106,8 @@ sealed class MusicHost : IDisposable
                             ? await _search.SearchAsync(query, "SoundCloud", cancellation.Token)
                             : await _catalog.SearchAsync(query, cancellation.Token);
                         cancellation.Token.ThrowIfCancellationRequested();
-                        foreach (var track in result.Tracks.Take(2)) Prepare(track);
                         Reply(id, new { result.Tracks, result.Artists, result.Messages, Query = query, Source = source });
+                        foreach (var track in result.Tracks.Take(2)) Prepare(track);
                     }
                     finally { lock (_searchLock) { if (ReferenceEquals(_searchCancellation, cancellation)) _searchCancellation = null; cancellation.Dispose(); } }
                     break;

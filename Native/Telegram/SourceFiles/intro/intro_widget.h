@@ -206,6 +206,7 @@ private:
 	object_ptr<Ui::FadeWrap<Ui::IconButton>> _back;
 	object_ptr<Ui::FadeWrap<Ui::RoundButton>> _update = { nullptr };
 	object_ptr<Ui::FadeWrap<Ui::RoundButton>> _settings;
+	object_ptr<Ui::FadeWrap<Ui::LinkButton>> _wsProxy;
 	object_ptr<Ui::FadeWrap<Ui::FlatLabel>> _testModeLabel = { nullptr };
 
 	object_ptr<Ui::FadeWrap<Ui::RoundButton>> _next;

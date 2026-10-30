@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "intro/intro_widget.h"
 
 #include "intro/intro_start.h"
+#include "settings/sections/settings_ws_proxy.h"
 #include "intro/intro_phone.h"
 #include "intro/intro_qr.h"
 #include "intro/intro_code.h"
@@ -89,6 +90,8 @@ Widget::Widget(
 		this,
 		tr::lng_menu_settings(),
 		st::defaultBoxButton))
+, _wsProxy(this, object_ptr<Ui::LinkButton>(
+	this, u"TgWsProxy By FlowSeal"_q))
 , _next(
 	this,
 	object_ptr<Ui::RoundButton>(this, nullptr, *_nextStyle))
@@ -98,6 +101,9 @@ Widget::Widget(
 		rpl::single(true))) {
 	_settings->entity()->setTextTransform(Ui::RoundButtonTextTransform::ToUpper);
 	controller->setDefaultFloatPlayerDelegate(floatPlayerDelegate());
+	_wsProxy->entity()->setClickedCallback([=] {
+		controller->show(Settings::BuiltInWsProxyBox(_account));
+	});
 
 	getData()->country = ComputeNewAccountCountry();
 
@@ -449,6 +455,7 @@ void Widget::fixOrder() {
 	_next->raise();
 	if (_update) _update->raise();
 	if (_changeLanguage) _changeLanguage->raise();
+	_wsProxy->raise();
 	_settings->raise();
 	_back->raise();
 	floatPlayerRaiseAll();
@@ -458,6 +465,7 @@ void Widget::fixOrder() {
 void Widget::moveToStep(Step *step, StackAction action, Animate animate) {
 	appendStep(step);
 	_back->raise();
+	_wsProxy->raise();
 	_settings->raise();
 	if (_update) {
 		_update->raise();
@@ -713,6 +721,7 @@ void Widget::showControls() {
 	_nextShownAnimation.stop();
 	_connecting->setForceHidden(false);
 	auto hasCover = getStep()->hasCover();
+	_wsProxy->show(anim::type::instant);
 	_settings->toggle(!hasCover, anim::type::instant);
 	if (_testModeLabel) {
 		_testModeLabel->toggle(!hasCover, anim::type::instant);
@@ -763,6 +772,7 @@ void Widget::hideControls() {
 	getStep()->hide();
 	_next->hide(anim::type::instant);
 	_connecting->setForceHidden(true);
+	_wsProxy->hide(anim::type::instant);
 	_settings->hide(anim::type::instant);
 	if (_testModeLabel) _testModeLabel->hide(anim::type::instant);
 	if (_update) _update->hide(anim::type::instant);
@@ -835,6 +845,9 @@ void Widget::updateControlsGeometry() {
 		getStep()->hasCover() ? st::introCoverHeight : 0,
 		shown);
 	_settings->moveToRight(skip, controlsTop + skip);
+	_wsProxy->moveToRight(
+		skip,
+		_settings->y() + _settings->height() + skip);
 	if (_testModeLabel) {
 		_testModeLabel->moveToRight(
 			skip + _settings->width() + skip,

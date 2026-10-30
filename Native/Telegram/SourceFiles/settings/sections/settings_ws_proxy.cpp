@@ -282,6 +282,7 @@ void StartBuiltInWsProxyIfEnabled() {
 }
 
 object_ptr<Ui::BoxContent> BuiltInWsProxyBox(not_null<Main::Account*> account) {
+	const auto weakAccount = base::make_weak(account.get());
 	return Box([=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(rpl::single(u"TgWsProxy By FlowSeal"_q));
 		box->setWidth(st::boxWideWidth + st::boxWidth / 2);
@@ -335,7 +336,11 @@ object_ptr<Ui::BoxContent> BuiltInWsProxyBox(not_null<Main::Account*> account) {
 			state->connected = true;
 			const auto generation = state->generation;
 			state->message = u"Проверяем подключение к Telegram…"_q;
-			MTP::StartProxyCheck(&account->mtp(), WsProxy(state->requested), false, state->v4, state->v6,
+			if (!weakAccount) {
+				fail(u"Экран входа закрыт. Откройте TgWsProxy повторно."_q);
+				return;
+			}
+			MTP::StartProxyCheck(&weakAccount->mtp(), WsProxy(state->requested), false, state->v4, state->v6,
 				[=](MTP::details::AbstractConnection *, int ping) {
 					QTimer::singleShot(0, box, [=] {
 						if (!state->checking || state->generation != generation) return;
